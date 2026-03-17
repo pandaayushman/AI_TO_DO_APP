@@ -1,10 +1,7 @@
 from plyer import notification
-
-
-def send_notification(title, message):
-
+def send_notification(task):
     notification.notify(
-        title=title,
-        message=message,
-        timeout=10
+        title = "Task Reminder",
+        message = task,
+        timeout = 10
     )
