@@ -1,17 +1,28 @@
-from datetime import datetime
 import dateparser
+from dateparser.search import search_dates
+from datetime import datetime
+
 
 def parse_task(text):
 
-    if "|" in text:
+    result = search_dates(
+        text,
+        settings={
+            "PREFER_DATES_FROM": "future",
+            "RELATIVE_BASE": datetime.now()
+        }
+    )
 
-        title, time_part = text.split("|")
+    if result is None:
+        return text, None
 
-        return title.strip(), time_part.strip()
+    # first detected date
+    detected_text, detected_date = result[0]
 
-    dt = dateparser.parse(text)
+    # remove the detected time phrase from task
+    task_text = text.replace(detected_text, "").strip()
 
-    if dt is None:
-        dt = datetime.now()
+    if task_text == "":
+        task_text = text
 
-    return text, dt.strftime("%Y-%m-%d %H:%M")
+    return task_text, detected_date

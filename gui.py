@@ -1,98 +1,89 @@
-from PySide6.QtWidgets import *
+from PySide6.QtWidgets import (
+    QWidget,
+    QVBoxLayout,
+    QLineEdit,
+    QPushButton,
+    QListWidget,
+    QMessageBox
+)
+
+from database import add_task, get_tasks, delete_task
 from ai_parser import parse_task
-from database import add_task, get_tasks, delete_task, update_task
 
 
 class TodoWindow(QWidget):
 
     def __init__(self):
-
         super().__init__()
 
-        self.setWindowTitle("AI ToDo Assistant")
-        self.resize(400, 500)
+        self.setWindowTitle("AI ToDo Manager")
+        self.setMinimumSize(400, 500)
 
         layout = QVBoxLayout()
 
         self.input = QLineEdit()
-        self.input.setPlaceholderText("Study ML tomorrow 6pm")
+        self.input.setPlaceholderText("Example: study ML tomorrow at 8pm")
 
-        self.button = QPushButton("Add Task")
+        self.add_btn = QPushButton("Add Task")
+
+        self.task_list = QListWidget()
+
         self.delete_btn = QPushButton("Delete Selected Task")
-        self.update_btn = QPushButton("Update Selected Task")
-
-        self.list = QListWidget()
 
         layout.addWidget(self.input)
-        layout.addWidget(self.button)
-        layout.addWidget(self.update_btn)
+        layout.addWidget(self.add_btn)
+        layout.addWidget(self.task_list)
         layout.addWidget(self.delete_btn)
-        layout.addWidget(self.list)
 
         self.setLayout(layout)
 
-        self.button.clicked.connect(self.add_task)
-        self.delete_btn.clicked.connect(self.delete_task)
-        self.update_btn.clicked.connect(self.update_task)
+        self.add_btn.clicked.connect(self.add_task_gui)
+        self.delete_btn.clicked.connect(self.delete_task_gui)
 
         self.load_tasks()
 
-    def add_task(self):
-
-        text = self.input.text()
-
-        title, dt = parse_task(text)
-
-        add_task(title, dt)
-
-        self.list.addItem(f"{title} | {dt}")
-
-        self.input.clear()
-
     def load_tasks(self):
 
-        self.list.clear()
+        self.task_list.clear()
 
         tasks = get_tasks()
 
-        for t in tasks:
-            item = QListWidgetItem(f"{t[1]} | {t[2]}")
-            item.setData(1, t[0])
-            self.list.addItem(item)
+        for task in tasks:
+            self.task_list.addItem(f"{task[1]}  |  {task[2]}")
 
-    def delete_task(self):
+    def add_task_gui(self):
 
-        item = self.list.currentItem()
+        text = self.input.text()
 
-        if not item:
+        task_text, task_time = parse_task(text)
+
+        if task_time is None:
+            QMessageBox.warning(
+                self,
+                "Time not detected",
+                "Example:\nStudy ML tomorrow at 8pm\nCall mom in 2 hours"
+            )
             return
 
-        task_id = item.data(1)
+        task_time_str = task_time.strftime("%Y-%m-%d %H:%M")
+
+        add_task(task_text, task_time_str)
+
+        self.input.clear()
+
+        self.load_tasks()
+
+    def delete_task_gui(self):
+
+        selected = self.task_list.currentRow()
+
+        if selected < 0:
+            return
+
+        tasks = get_tasks()
+
+        task_id = tasks[selected][0]
 
         delete_task(task_id)
 
         self.load_tasks()
-
-    def update_task(self):
-
-        item = self.list.currentItem()
-
-        if not item:
-            return
-
-        task_id = item.data(1)
-
-        text = self.input.text()
-
-        title, dt = parse_task(text)
-
-        update_task(task_id, title, dt)
-
-        self.load_tasks()
-
-        self.input.clear()
-    
-    def closeEvent(self, event):
-        event.ignore()
-        self.hide()
-        
